@@ -20,18 +20,49 @@ var UsersRouter = /** @class */ (function (_super) {
     __extends(UsersRouter, _super);
     function UsersRouter() {
         var _this = _super.call(this, users_model_1.User) || this;
+        //filtro
+        _this.findByEmail = function (req, res, next) {
+            if (req.query.email) {
+                users_model_1.User.findByEmail(req.query.email)
+                    .then(function (user) {
+                    if (user) {
+                        return [user];
+                    }
+                    else {
+                        return [];
+                    }
+                })
+                    .then(_this.renderAll(res, next))
+                    .catch(next);
+            }
+            else {
+                next();
+            }
+        };
+        //filtro
+        _this.findByName = function (req, res, next) {
+            if (req.query.name) {
+                users_model_1.User.find({ name: new RegExp('^' + req.query.name + '$', 'i') })
+                    .then(_this.renderAll(res, next))
+                    .catch(next);
+            }
+            else {
+                next();
+            }
+        };
         _this.on('beforeRender', function (document) {
             document.password = undefined;
         });
         return _this;
     }
     UsersRouter.prototype.applyRoutes = function (application) {
-        application.get('/users', this.findAll);
-        application.get('/users/:id', [this.validateId, this.findById]);
-        application.post('/users', this.save);
-        application.put('/users/:id', [this.validateId, this.replace]);
-        application.patch('/users/:id', [this.validateId, this.update]);
-        application.del('/users/:id', [this.validateId, this.delete]);
+        application.get({ path: "" + this.basePath, version: '2.0.0' }, [this.findByEmail, this.findByName, this.findAll]);
+        // application.get({path: `${this.basePath}`, version: '1.0.0'}, this.findAll)
+        application.get(this.basePath + "/:id", [this.validateId, this.findById]);
+        application.post("" + this.basePath, this.save);
+        application.put(this.basePath + "/:id", [this.validateId, this.replace]);
+        application.patch(this.basePath + "/:id", [this.validateId, this.update]);
+        application.del(this.basePath + "/:id", [this.validateId, this.delete]);
     };
     return UsersRouter;
 }(model_router_1.ModelRouter));

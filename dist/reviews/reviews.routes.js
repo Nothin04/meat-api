@@ -29,10 +29,16 @@ var ReviewsRouter = /** @class */ (function (_super) {
         };
         return _this;
     }
+    ReviewsRouter.prototype.envelope = function (document) {
+        var resource = _super.prototype.envelope.call(this, document);
+        var restId = document.restaurant._id ? document.restaurant._id : document.restaurant;
+        resource._links.restaurant = "/restaurants/" + restId;
+        return resource;
+    };
     ReviewsRouter.prototype.applyRoutes = function (application) {
-        application.get('/reviews', this.findAll);
-        application.get('/reviews/:id', [this.validateId, this.findById]);
-        application.post('/reviews', this.save);
+        application.get("" + this.basePath, this.findAll);
+        application.get(this.basePath + "/:id", [this.validateId, this.findById]);
+        application.post("" + this.basePath, this.save);
     };
     return ReviewsRouter;
 }(model_router_1.ModelRouter));

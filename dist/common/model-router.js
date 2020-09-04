@@ -22,6 +22,7 @@ var ModelRouter = /** @class */ (function (_super) {
     function ModelRouter(model) {
         var _this = _super.call(this) || this;
         _this.model = model;
+        _this.pageSize = 4;
         _this.validateId = function (req, res, next) {
             if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
                 next(new restify_errors_1.NotFoundError('Document not found'));
@@ -30,9 +31,16 @@ var ModelRouter = /** @class */ (function (_super) {
                 next();
             }
         };
-        _this.findAll = function (rec, res, next) {
-            _this.model.find()
-                .then(_this.renderAll(res, next))
+        //paginacao
+        _this.findAll = function (req, res, next) {
+            var page = parseInt(req.query._page || 1);
+            page = page > 0 ? page : 1;
+            var skip = (page - 1) * _this.pageSize;
+            _this.model.count({}).exec()
+                .then(function (count) { return _this.model.find()
+                .skip(skip)
+                .limit(_this.pageSize)
+                .then(_this.renderAll(res, next, { page: page, count: count, pageSize: _this.pageSize, url: req.url })); })
                 .catch(next);
         };
         _this.findById = function (req, res, next) {
@@ -75,8 +83,33 @@ var ModelRouter = /** @class */ (function (_super) {
                 return next();
             }).catch(next);
         };
+        _this.basePath = "/" + model.collection.name;
         return _this;
     }
+    ModelRouter.prototype.envelope = function (document) {
+        var resource = Object.assign({ _links: {} }, document.toJSON());
+        resource._links.self = this.basePath + "/" + resource._id;
+        return resource;
+    };
+    ModelRouter.prototype.envelopeAll = function (documents, options) {
+        if (options === void 0) { options = {}; }
+        var resource = {
+            _links: {
+                self: "" + options.url
+            },
+            items: documents
+        };
+        if (options.page && options.count && options.pageSize) {
+            if (options.page > 1) {
+                resource._links.previous = this.basePath + "?_page=" + (options.page - 1);
+            }
+            var remaining = options.count - (options.page * options.pageSize);
+            if (remaining > 0) {
+                resource._links.next = this.basePath + "?_page=" + (options.page + 1);
+            }
+        }
+        return resource;
+    };
     return ModelRouter;
 }(router_1.Router));
 exports.ModelRouter = ModelRouter;
